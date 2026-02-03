@@ -30,7 +30,7 @@ class SamGovClient:
         naics_code: Optional[str] = None,
         posted_from: Optional[datetime] = None,
         posted_to: Optional[datetime] = None,
-        limit: Optional[int] = None,
+        limit: Optional[int] = 100,
     ) -> list[dict]:
         """
         Search for opportunities, optionally filtered by NAICS code prefix.
