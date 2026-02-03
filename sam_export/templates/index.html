@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAM.gov Export Tool</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0f14;
+            --bg-secondary: #121920;
+            --bg-tertiary: #1a232d;
+            --border: #2a3a4a;
+            --text-primary: #e8edf3;
+            --text-secondary: #8899aa;
+            --text-muted: #556677;
+            --accent: #00d4aa;
+            --accent-dim: #00a080;
+            --accent-glow: rgba(0, 212, 170, 0.15);
+            --warning: #ffaa00;
+            --error: #ff5566;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Subtle grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 60px 60px;
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 48px;
+            padding-bottom: 32px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+            color: var(--bg-primary);
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 15px;
+            margin-top: 4px;
+        }
+
+        /* Main layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 32px;
+        }
+
+        @media (max-width: 900px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Panel styling */
+        .panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-tertiary);
+        }
+
+        .panel-header h2 {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+        }
+
+        .panel-body {
+            padding: 24px 20px;
+        }
+
+        /* Form controls */
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 14px 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .input-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 6px;
+        }
+
+        /* NAICS presets */
+        .naics-presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .preset-btn {
+            padding: 6px 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .preset-btn:hover {
+            background: var(--bg-primary);
+            border-color: var(--accent-dim);
+            color: var(--accent);
+        }
+
+        /* Range slider */
+        .range-wrapper {
+            position: relative;
+        }
+
+        .range-value {
+            position: absolute;
+            right: 0;
+            top: -28px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            background: var(--bg-tertiary);
+            border: none;
+            border-radius: 3px;
+            padding: 0;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        /* Search button */
+        .search-btn {
+            width: 100%;
+            padding: 16px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dim) 100%);
+            border: none;
+            border-radius: 8px;
+            color: var(--bg-primary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 8px;
+        }
+
+        .search-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px var(--accent-glow);
+        }
+
+        .search-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .search-btn.loading {
+            position: relative;
+            color: transparent;
+        }
+
+        .search-btn.loading::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            top: 50%;
+            left: 50%;
+            margin: -10px 0 0 -10px;
+            border: 2px solid var(--bg-primary);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Results panel */
+        .results-panel {
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .results-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Empty state */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 60px 40px;
+            color: var(--text-muted);
+        }
+
+        .empty-icon {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .empty-state h3 {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+        }
+
+        /* Results header */
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-tertiary);
+        }
+
+        .results-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+        }
+
+        .results-count strong {
+            color: var(--accent);
+        }
+
+        .download-btn {
+            padding: 10px 20px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            background: transparent;
+            border: 1px solid var(--accent);
+            border-radius: 6px;
+            color: var(--accent);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .download-btn:hover {
+            background: var(--accent);
+            color: var(--bg-primary);
+        }
+
+        /* Results table */
+        .results-table-wrapper {
+            flex: 1;
+            overflow-x: auto;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .results-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+        }
+
+        .results-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .results-table tr:hover td {
+            background: var(--bg-tertiary);
+        }
+
+        .results-table .title-cell {
+            color: var(--text-primary);
+            font-weight: 500;
+            max-width: 300px;
+        }
+
+        .results-table .naics-cell {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent);
+        }
+
+        .results-table .date-cell {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            background: var(--bg-primary);
+            border-radius: 4px;
+            color: var(--text-secondary);
+        }
+
+        /* Status messages */
+        .status-message {
+            padding: 16px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin: 20px;
+        }
+
+        .status-message.error {
+            background: rgba(255, 85, 102, 0.1);
+            border: 1px solid rgba(255, 85, 102, 0.3);
+            color: var(--error);
+        }
+
+        .status-message.warning {
+            background: rgba(255, 170, 0, 0.1);
+            border: 1px solid rgba(255, 170, 0, 0.3);
+            color: var(--warning);
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 48px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <div class="logo-icon">SAM</div>
+                <div>
+                    <h1>SAM.gov Export Tool</h1>
+                    <p class="subtitle">Search and export federal contract opportunities</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="main-grid">
+            <!-- Search Panel -->
+            <aside>
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2>Search Parameters</h2>
+                    </div>
+                    <div class="panel-body">
+                        <form id="searchForm">
+                            <div class="form-group">
+                                <label for="naics">NAICS Code</label>
+                                <input type="text" id="naics" name="naics" value="" placeholder="Leave empty for all">
+                                <p class="input-hint">Filter by prefix (e.g., 54, 541) or leave empty for all</p>
+                                <div class="naics-presets">
+                                    <button type="button" class="preset-btn" data-naics="">All</button>
+                                    <button type="button" class="preset-btn" data-naics="212">212 Mining</button>
+                                    <button type="button" class="preset-btn" data-naics="23">23 Construction</button>
+                                    <button type="button" class="preset-btn" data-naics="54">54 Professional</button>
+                                    <button type="button" class="preset-btn" data-naics="33">33 Manufacturing</button>
+                                    <button type="button" class="preset-btn" data-naics="51">51 Information</button>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="days">Date Range</label>
+                                <div class="range-wrapper">
+                                    <span class="range-value" id="daysValue">30 days</span>
+                                    <input type="range" id="days" name="days" min="1" max="365" value="30">
+                                </div>
+                                <p class="input-hint">Look back from today (max 365 days)</p>
+                            </div>
+
+                            <button type="submit" class="search-btn" id="searchBtn">
+                                Search & Export
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Results Panel -->
+            <main>
+                <div class="panel results-panel">
+                    <div class="panel-header">
+                        <h2>Results</h2>
+                    </div>
+                    <div class="results-body" id="resultsBody">
+                        <div class="empty-state">
+                            <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <h3>Ready to search</h3>
+                            <p>Configure your search parameters and click "Search & Export"</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <footer>
+            Data sourced from <a href="https://sam.gov" target="_blank">SAM.gov</a> Opportunities API
+        </footer>
+    </div>
+
+    <script>
+        const searchForm = document.getElementById('searchForm');
+        const searchBtn = document.getElementById('searchBtn');
+        const resultsBody = document.getElementById('resultsBody');
+        const daysInput = document.getElementById('days');
+        const daysValue = document.getElementById('daysValue');
+        const naicsInput = document.getElementById('naics');
+
+        // Update days display
+        daysInput.addEventListener('input', () => {
+            daysValue.textContent = `${daysInput.value} days`;
+        });
+
+        // NAICS preset buttons
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                naicsInput.value = btn.dataset.naics;
+            });
+        });
+
+        // Form submission
+        searchForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const naics = naicsInput.value.trim();
+            const days = daysInput.value;
+
+            // Show loading state
+            searchBtn.disabled = true;
+            searchBtn.classList.add('loading');
+            resultsBody.innerHTML = `
+                <div class="empty-state">
+                    <h3>Searching SAM.gov...</h3>
+                    <p>This may take a moment</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ naics, days: parseInt(days) })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showError(data.error || 'Search failed');
+                    return;
+                }
+
+                if (data.count === 0) {
+                    showWarning(`No opportunities found for NAICS ${naics} in the last ${days} days`);
+                    return;
+                }
+
+                showResults(data);
+
+            } catch (err) {
+                showError('Failed to connect to server');
+            } finally {
+                searchBtn.disabled = false;
+                searchBtn.classList.remove('loading');
+            }
+        });
+
+        function showError(message) {
+            resultsBody.innerHTML = `
+                <div class="status-message error">${message}</div>
+                <div class="empty-state">
+                    <h3>Search failed</h3>
+                    <p>Please check your parameters and try again</p>
+                </div>
+            `;
+        }
+
+        function showWarning(message) {
+            resultsBody.innerHTML = `
+                <div class="status-message warning">${message}</div>
+                <div class="empty-state">
+                    <svg class="empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/>
+                    </svg>
+                    <h3>No results</h3>
+                    <p>Try a different NAICS code or longer date range</p>
+                </div>
+            `;
+        }
+
+        function showResults(data) {
+            let tableRows = data.sample.map(opp => `
+                <tr>
+                    <td class="naics-cell">${opp.naicsCode || '-'}</td>
+                    <td class="title-cell">${opp.title}</td>
+                    <td><span class="type-badge">${opp.type || '-'}</span></td>
+                    <td class="date-cell">${opp.postedDate || '-'}</td>
+                </tr>
+            `).join('');
+
+            resultsBody.innerHTML = `
+                <div class="results-header">
+                    <span class="results-count">
+                        <strong>${data.count}</strong> opportunities found
+                        &nbsp;·&nbsp; ${data.date_from} to ${data.date_to}
+                    </span>
+                    <button class="download-btn" onclick="downloadCSV()">
+                        Download CSV
+                    </button>
+                </div>
+                <div class="results-table-wrapper">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                <th>NAICS</th>
+                                <th>Title</th>
+                                <th>Type</th>
+                                <th>Posted</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows}
+                        </tbody>
+                    </table>
+                </div>
+                ${data.count > 10 ? `<p style="padding: 16px 20px; color: var(--text-muted); font-size: 13px; text-align: center;">Showing 10 of ${data.count} results · Download CSV for full data</p>` : ''}
+            `;
+        }
+
+        function downloadCSV() {
+            window.location.href = '/api/download';
+        }
+    </script>
+</body>
+</html>
