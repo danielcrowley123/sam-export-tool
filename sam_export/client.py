@@ -63,8 +63,12 @@ class SamGovClient:
         # For prefixes, we fetch all and filter client-side
         use_api_filter = naics_code and len(naics_code) == 6
 
-        while True:
-            params = {
+        while True: to:                                                                                                  
+          max_pages = 5  # Limit to 5 API calls to prevent timeout                                                        
+          page = 0                                                                                                        
+          while page < max_pages:                                                                                         
+              page += 1                                                                                                   
+              params = {
                 "api_key": self.api_key,
                 "postedFrom": posted_from.strftime("%m/%d/%Y"),
                 "postedTo": posted_to.strftime("%m/%d/%Y"),
